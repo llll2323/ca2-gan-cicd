@@ -1,8 +1,8 @@
 FROM tensorflow/serving
 
-# Copy model files directly from ./generator to TF Serving's expected path
+# Copy model files from ./ai_model/gan_generator to TF Serving's expected path
 # Creates: /models/generator/1/saved_model.pb
-COPY ./generator /models/generator/1/
+COPY ./ai_model/gan_generator /models/generator/1/
 
 # Environment variables
 ENV MODEL_NAME=generator \
