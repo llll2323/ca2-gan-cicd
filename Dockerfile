@@ -1,9 +1,9 @@
 FROM tensorflow/serving
-COPY ai_model/gan_generator /models/generator
+COPY ai_model/gan_generator /models/generator/1/
 # RUN apt-get -y update
 # && apt-get install -y git && git reset --hard
-ENV MODEL_NAME=generator
-ENV MODEL_BASE_PATH=/models
+ENV MODEL_NAME=generator \
+    MODEL_BASE_PATH=/models
 EXPOSE 8500
 EXPOSE 8501
 RUN echo '#!/bin/bash \n\n\
