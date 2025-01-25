@@ -1,11 +1,11 @@
 FROM tensorflow/serving
 
 # Copy model directory to /models/gan_generator
-COPY /ai_model/gan_generator /models/gan_generator
+COPY /ai_model/generator /models/generator
 
 # Set environment variables
-ENV MODEL_NAME=gan_generator
-ENV MODEL_BASE_PATH=/models/gan_generator
+ENV MODEL_NAME=generator
+ENV MODEL_BASE_PATH=/models/generator
 
 # Expose ports for REST API and gRPC
 EXPOSE 8500
