@@ -4,7 +4,8 @@ import json
 import numpy as np
 
 # Server URL for GAN model 
-GAN_URL = "http://localhost:8501/v1/models/generator:predict"
+#GAN_URL = "http://localhost:8501/v1/models/generator:predict"
+GAN_URL = "https://ca2-daaa2b04-2317748-lixiangong.onrender.com/v1/models/generator:predict"
 
 # Helper functions --------------------------------------------------
 def generate_latent_vectors(num_samples, latent_dim):
