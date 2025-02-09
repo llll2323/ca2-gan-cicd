@@ -194,6 +194,76 @@ function addToHistory(data) {
     }
 }
 
+// Add event listener for search type change
+document.getElementById('search-type').addEventListener('change', function(e) {
+    const similarityControl = document.getElementById('similarity-control');
+    similarityControl.classList.toggle('hidden', e.target.value !== 'similar');
+});
+
+// Add event listener for threshold change
+document.getElementById('similarity-threshold').addEventListener('input', function(e) {
+    document.getElementById('threshold-value').textContent = e.target.value;
+});
+
+
+// Update performSearch function to include threshold
+function performSearch() {
+    const searchVector = document.getElementById('vector-search').value.trim();
+    const searchType = document.getElementById('search-type').value;
+    const threshold = document.getElementById('similarity-threshold').value / 100; // Convert to decimal
+    
+    try {
+        let params;
+        
+        if (searchVector === '') {
+            params = new URLSearchParams({
+                page: 1,
+                date_from: document.getElementById('date-from').value,
+                date_to: document.getElementById('date-to').value
+            });
+        } else {
+            const vectorData = JSON.parse(searchVector);
+            
+            if (!Array.isArray(vectorData) || vectorData.length !== 100) {
+                alert('Please paste a valid vector with 100 dimensions');
+                return;
+            }
+            
+            params = new URLSearchParams({
+                search_type: searchType,
+                search_vector: JSON.stringify(vectorData),
+                threshold: threshold,
+                date_from: document.getElementById('date-from').value,
+                date_to: document.getElementById('date-to').value,
+                page: 1
+            });
+        }
+
+        fetch(`/history?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateHistoryDisplay(data);
+                } else {
+                    alert('Error loading history: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading history. Please try again.');
+            });
+    } catch (e) {
+        console.error('Parse error:', e);
+        alert('Please paste a valid JSON vector');
+    }
+}
+
+// Add this at the top of the file, after other function definitions
+document.addEventListener('DOMContentLoaded', function() {
+    // Load history when page loads
+    loadHistory(1);
+});
+
 async function loadHistory(page, search = '', dateFrom = '', dateTo = '') {
     try {
         const params = new URLSearchParams({
@@ -344,4 +414,11 @@ function downloadHistoryItem(item) {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
     }, 'image/jpeg', 0.95); // 0.95 is the JPEG quality
+}
+
+function copyHistoryVector(vector) {
+    // Vector is already an array, just stringify it
+    navigator.clipboard.writeText(JSON.stringify(vector))
+        .then(() => alert('Vector copied to clipboard!'))
+        .catch(err => alert('Failed to copy vector: ' + err));
 }
