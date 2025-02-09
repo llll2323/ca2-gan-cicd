@@ -103,6 +103,62 @@ function displayImage(imageData) {
     imageDisplay.appendChild(displayCanvas);
 }
 
+function copyVector() {
+    const vector = document.getElementById('current-vector').textContent;
+    if (vector) {
+        // Ensure we're copying just the array, not the formatted string
+        try {
+            const vectorData = JSON.parse(vector);
+            navigator.clipboard.writeText(JSON.stringify(vectorData))
+                .then(() => alert('Vector copied to clipboard!'))
+                .catch(err => alert('Failed to copy vector: ' + err));
+        } catch (err) {
+            alert('Error processing vector data');
+        }
+    } else {
+        alert('No vector to copy. Generate an image first!');
+    }
+}
+
+async function pasteAndGenerate() {
+    try {
+        const text = await navigator.clipboard.readText();
+        const vector = JSON.parse(text);
+        
+        // Validate vector: now expecting 100 numbers
+        if (!Array.isArray(vector) || vector.length !== 100) {
+            throw new Error('Invalid vector format. Must be array of 100 numbers.');
+        }
+
+        const batch = [vector];
+
+        // Send to server
+        const response = await fetch('/generate_from_vector', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                signature_name: "serving_default",
+                instances: batch
+              })              
+        });
+        
+        const data = await response.json();
+        if (data.status === 'success') {
+            document.getElementById('current-vector').textContent =
+                JSON.stringify(data.vector, null, 2);
+            displayImage(data.image[0]);
+            addToHistory(data);
+        } else {
+            alert('Error generating image: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error pasting vector: ' + error.message);
+    }
+}
+
 function extractImageInfo(imageData) {
     let width, height, flatData;
 
