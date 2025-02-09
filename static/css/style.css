@@ -1,0 +1,364 @@
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center;
+    padding: 20px 0;
+    font-weight: bold;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;  /* vector, image+button, controls */
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.vector-box {
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.generation-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.generate-btn {
+    width: 100%;
+    padding: 10px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+}
+
+.image-display {
+    width: 280px;
+    height: 280px;
+    border: 1px solid #ccc;
+}
+
+.control-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: flex-start;
+    padding-top: 50px;  /* Align with image height */
+}
+
+.control-btn {
+    padding: 10px;
+    background: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.history-section {
+    margin-top: 20px;
+}
+
+.history-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 10px;
+}
+
+/* The key CSS for your vector container */
+#current-vector-container {
+    max-width: 400px;     /* Don't let it get too wide */
+    max-height: 200px;     /* Keep it short to force scrolling */
+    overflow: auto;       /* Scroll if overflow */
+    font-size: 10px;      /* Smaller text */
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    padding: 8px;
+    margin: 10px 0;
+}
+
+/* Force wrapping of long lines in <pre> */
+#current-vector {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.loading-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    font-size: 14px;
+    color: #666;
+}
+
+.hidden {
+    display: none;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.history-filters {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: center;
+}
+
+.history-filters input[type="text"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 200px;
+}
+
+.date-filters {
+    display: flex;
+    gap: 10px;
+}
+
+.date-filters label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.history-table {
+    width: 100%;
+    margin-top: 20px;
+    border-collapse: collapse;
+}
+
+.history-table table {
+    width: 100%;
+}
+
+.history-table th,
+.history-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ddd;
+    vertical-align: middle;
+}
+
+.history-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.history-table td.image-cell {
+    text-align: center;
+}
+
+.history-table td.vector-display {
+    font-family: monospace;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+}
+
+.history-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.history-item canvas {
+    width: 56px;
+    height: 56px;
+}
+
+.vector-display {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.history-btn {
+    padding: 5px 10px;
+    margin: 0 2px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #f0f0f0;
+}
+
+.delete-btn {
+    background: #ffebee;
+    border-color: #ffcdd2;
+}
+
+.delete-btn:hover {
+    background: #ffcdd2;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #ccc;
+}
+
+.logout-btn {
+    padding: 8px 16px;
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+}
+
+.logout-btn:hover {
+    background: #c82333;
+}
+
+.login-container {
+    max-width: 400px;
+    margin: 100px auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background: white;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.login-btn {
+    padding: 12px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.login-btn:hover {
+    background: #0056b3;
+}
+
+.error-message {
+    color: #dc3545;
+    text-align: center;
+    padding: 10px;
+    background: #f8d7da;
+    border-radius: 4px;
+}
+
+.search-type {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    margin-right: 10px;
+    width: 200px;
+}
+
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.similarity-control {
+    margin: 10px 0;
+}
+
+.similarity-control.hidden {
+    display: none;
+}
+
+#similarity-threshold {
+    width: 200px;
+    margin: 0 10px;
+}
+
+.info-display {
+    padding: 10px;
+    font-size: 0.9em;
+    line-height: 1.4;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.info-display div {
+    margin-bottom: 8px;
+}
+
+.info-display div:last-child {
+    margin-bottom: 0;
+}
+
+.info-display strong {
+    color: #495057;
+    margin-right: 5px;
+}
+
+.dropbox-link {
+    color: #0061fe;
+    text-decoration: none;
+    word-break: break-all;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropbox-link:hover {
+    text-decoration: underline;
+    color: #0052d9;
+}

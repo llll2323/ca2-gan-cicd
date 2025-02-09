@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GAN Explorer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="header">
+        <h1>GAN EXPLORER</h1>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="container">
+        <h1>GAN EXPLORER</h1>
+
+        <div class="main-content">
+            <!-- Left side: Vector display -->
+            <div class="vector-box">
+                <h3>Current Vector</h3>
+                <div id="current-vector-container">
+                    <pre id="current-vector"></pre>
+                </div>
+            </div>
+
+            <!-- Middle: Generate button and image -->
+            <div class="generation-area">
+                <div class="generate-btn" id="generate-button">
+                    Click To Generate Random Image
+                </div>
+                <div id="generated-image" class="image-display">
+                    <!-- Generated image goes here -->
+                </div>
+                <div id="loading-indicator" class="loading-indicator hidden">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Generating image...</div>
+                </div>
+            </div>
+
+            <!-- Right side: Control buttons -->
+            <div class="control-buttons">
+                <button class="control-btn" id="copy-vector-btn">Copy Current Vector</button>
+                <button class="control-btn" id="paste-generate-btn">Paste & Generate</button>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h3>Generation History</h3>
+            
+            <!-- Add filter controls -->
+            <div class="history-filters">
+                <div class="search-container">
+                    <select id="search-type" class="search-type">
+                        <option value="exact">Exact Match</option>
+                        <option value="similar">Similar Vectors</option>
+                    </select>
+                    <div id="similarity-control" class="similarity-control hidden">
+                        <label>Similarity Threshold: <span id="threshold-value">95</span>%</label>
+                        <input type="range" id="similarity-threshold" min="0" max="100" value="95">
+                    </div>
+                    <input type="text" id="vector-search" placeholder="Paste vector to search...">
+                    <button id="search-btn" class="search-btn">Search</button>
+                </div>
+                
+                <div class="date-filters">
+                    <label>From: 
+                        <input type="date" id="date-from">
+                    </label>
+                    <label>To: 
+                        <input type="date" id="date-to">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Add table view -->
+            <div class="history-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th width="15%">Date</th>
+                            <th width="20%">Image</th>
+                            <th width="50%">Vector</th>
+                            <th width="15%">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-grid">
+                        <!-- History items will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set up event listeners
+            document.getElementById('generate-button').addEventListener('click', generateImage);
+            document.getElementById('copy-vector-btn').addEventListener('click', copyVector);
+            document.getElementById('paste-generate-btn').addEventListener('click', pasteAndGenerate);
+            document.getElementById('search-btn').addEventListener('click', performSearch);
+            document.getElementById('date-from').addEventListener('change', performSearch);
+            document.getElementById('date-to').addEventListener('change', performSearch);
+            
+            // Load initial history
+            loadHistory(1);
+        });
+    </script>
+</body>
+</html>
+    
