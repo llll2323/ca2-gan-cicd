@@ -33,9 +33,6 @@ app.secret_key = 'YOUR_AWS_SECRET_KEY'
 
 db = SQLAlchemy(app)
 
-# Add these near the top with your other configurations
-USERNAME = 'admin'
-PASSWORD = 'password123'  # In production, use hashed passwords
 
 # Login required decorator
 def login_required(f):
@@ -61,7 +58,10 @@ class User(db.Model):
     password = db.Column(db.String(120), nullable=False)  # In production, store hashed passwords
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     last_login = db.Column(db.DateTime)
-    
+
+# INSERT INTO users (username, password, created_at) 
+# VALUES ('admin', 'password123', NOW());
+
 # Create tables if they don't exist
 with app.app_context():
     db.create_all()
@@ -130,9 +130,18 @@ def upload_to_s3(image_data, filename):
 def login():
     error = None
     if request.method == 'POST':
-        if request.form['username'] == USERNAME and request.form['password'] == PASSWORD:
+        username = request.form['username']
+        password = request.form['password']
+        
+        # Query the User table
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.password == password:  # In production, use hashed passwords
             session['logged_in'] = True
+            user.last_login = datetime.now()  # Update last login time
+            db.session.commit()
             return redirect(url_for('index'))
+        
         error = 'Invalid credentials. Please try again.'
     return render_template('login.html', error=error)
 
