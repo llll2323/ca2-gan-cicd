@@ -18,8 +18,12 @@ from botocore.exceptions import ClientError
 
 app = Flask(__name__)
 
-# PostgreSQL Database Connection (Aiven)
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2EpS34WfDDQ@mysql-2b7479e9-ca2-gan.i.aivencloud.com:15217/defaultdb?ssl_ca=./ca.pem"
+# Database Connection (Aiven)
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2EpS34WfDDQ"
+    "@mysql-2b7479e9-ca2-gan.i.aivencloud.com:15217/defaultdb"
+    "?ssl_ca=/etc/ssl/certs/ca.pem"
+)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # AWS Configuration
