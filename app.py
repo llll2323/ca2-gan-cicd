@@ -23,7 +23,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {
         'ssl': {
-            'ca': '/etc/ssl/certs/ca-certificates.crt'
+            'verify_cert': False,
+            'check_hostname': False,
+            'ssl_mode': 'VERIFY_NONE'
         }
     }
 }
