@@ -1,6 +1,9 @@
 # Use official Python image as the base
 FROM python:3.8
 
+# Install SSL certificates
+RUN apt-get update && apt-get install -y ca-certificates
+
 # Set the working directory
 WORKDIR /app
 
