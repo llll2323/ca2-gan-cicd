@@ -101,28 +101,29 @@ def get_s3_client():
 def upload_to_s3(image_data, filename):
     """Upload an image to S3 and return the public URL"""
     try:
-        # Convert PIL Image to bytes
         img_bytes = io.BytesIO()
         image_data.save(img_bytes, format='JPEG')
         img_bytes.seek(0)
 
-        # Upload to S3
         s3_client = get_s3_client()
         s3_client.upload_fileobj(
             img_bytes,
             app.config['AWS_BUCKET_NAME'],
             filename,
             ExtraArgs={
-                'ContentType': 'image/jpeg'
+                'ContentType': 'image/jpeg',
+                'CacheControl': 'max-age=31536000',  # Cache for 1 year
+                'ACL': 'public-read'
             }
         )
 
-        # Generate the public URL
         url = f"https://{app.config['AWS_BUCKET_NAME']}.s3.{app.config['AWS_REGION']}.amazonaws.com/{filename}"
+        logger.debug(f"Generated S3 URL: {url}")
         return url
 
     except ClientError as e:
         logger.error(f"Error uploading to S3: {e}")
+        logger.exception("Full traceback:")
         return None
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -149,48 +150,91 @@ def index():
 @login_required
 def generate():
     try:
-        if request.json and 'instances' in request.json:
-            response = requests.post(MODEL_URL, 
-                                   json=request.json,  
-                                   headers={'Content-Type': 'application/json'})
+        # Generate random latent vector
+        vector = np.random.randn(1, 100).astype('float32').tolist()
+        
+        # Prepare request data
+        data = {
+            "signature_name": "serving_default",
+            "instances": vector
+        }
+        
+        # Make request to model server
+        response = requests.post(MODEL_URL, json=data)
+        
+        # Check for specific error status codes
+        if response.status_code in [502, 503]:
+            return jsonify({
+                'status': 'error',
+                'message': 'Model server is currently unavailable. Please try again later.',
+                'code': response.status_code
+            }), 503
             
-            if response.status_code == 200:
+        # Check if response is successful
+        if response.status_code == 200:
+            try:
                 result = response.json()
+            except ValueError:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Invalid JSON response from model server',
+                    'response_text': response.text
+                }), 500
                 
-                # Process image and upload to S3
-                image_array = np.array(result['predictions'][0])
+            if 'predictions' not in result:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No predictions in model response',
+                    'response': result
+                }), 500
+                
+            # Process the image and upload to S3
+            try:
+                image_array = np.array(result['predictions']).reshape(28, 28)
                 image = process_image_for_s3(image_array)
-                filename = f"gan_image_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                
+                # Generate unique filename
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f'gan_image_{timestamp}.jpg'
+                
+                # Upload to S3
                 s3_url = upload_to_s3(image, filename)
                 
                 if not s3_url:
-                    return jsonify({'status': 'error', 'message': 'Failed to upload image to S3'}), 500
-
-                # Save to MySQL with S3 URL
-                new_record = GenerationHistory(
-                    vector=request.json['instances'][0],
-                    s3_url=s3_url
-                )
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Failed to upload image to S3'
+                    }), 500
+                
+                # Save to database
+                new_record = GenerationHistory(vector=vector, s3_url=s3_url)
                 db.session.add(new_record)
                 db.session.commit()
-
-                logger.info(f"Generated S3 URL: {s3_url}")
-
+                
                 return jsonify({
                     'status': 'success',
-                    'vector': request.json['instances'][0],
+                    'vector': vector,
                     'image': result['predictions'],
                     's3_url': s3_url
                 })
-            else:
-                return jsonify({'status': 'error', 'message': f'Model request failed: {response.text}'}), 500
+            except Exception as e:
+                logger.error(f"Error processing image or uploading to S3: {str(e)}")
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Error processing image: {str(e)}'
+                }), 500
                 
-        else:
-            return jsonify({'status': 'error', 'message': 'No instances in request'}), 400
-            
+        return jsonify({
+            'status': 'error',
+            'message': f'Model request failed with status {response.status_code}: {response.text}'
+        }), response.status_code
+        
     except Exception as e:
-        logger.error(f"Error in generate: {str(e)}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        logger.error(f"Error in generate route: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
 
 @app.route('/generate_from_vector', methods=['POST'])
 @login_required
@@ -364,27 +408,7 @@ def calculate_similarity(vector1, vector2):
     return dot_product / (norm1 * norm2) if norm1 * norm2 != 0 else 0
 
 def process_image_for_s3(image_array):
-    """Helper function to process image array into correct format"""
     try:
-        logger.debug(f"Original image array shape: {image_array.shape}")
-        logger.debug(f"Original array type: {type(image_array)}")
-        logger.debug(f"Sample of original values: {image_array.flatten()[:10]}")
-        
-        image_array = np.array(image_array)
-        
-        if len(image_array.shape) == 3 and image_array.shape[0] == 1:
-            logger.debug("Found 3D array with batch dimension, taking first image")
-            image_array = image_array[0]
-        elif len(image_array.shape) == 3:
-            logger.debug("Found 3D array, taking first channel")
-            image_array = image_array[:, :, 0]
-        elif len(image_array.shape) == 1:
-            logger.debug("Found 1D array, reshaping to 28x28")
-            image_array = image_array.reshape(28, 28)
-            
-        logger.debug(f"Processed array shape: {image_array.shape}")
-        logger.debug(f"Array min/max values: {np.min(image_array)}, {np.max(image_array)}")
-            
         width = height = 280  # 10x original size
         image = Image.new('RGB', (width, height), (0, 0, 0))
         
