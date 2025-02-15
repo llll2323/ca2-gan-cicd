@@ -1,24 +1,17 @@
-FROM tensorflow/serving
+# Use official Python image as the base
+FROM python:3.8
 
-# Copy model directory directly to /models/generator/1
-COPY ai_model/gan_generator/1 /models/generator/1
+# Set the working directory
+WORKDIR /app
 
-# Set environment variables
-ENV MODEL_NAME=generator
-ENV MODEL_BASE_PATH=/models/generator
+# Copy all project files into the container
+COPY . /app
 
-# Expose ports for REST API and gRPC
-EXPOSE 8500
-EXPOSE 8501
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt && pip list
 
-# Create custom entrypoint script for TensorFlow Serving
-RUN echo '#!/bin/bash \n\n\
-tensorflow_model_server \
---rest_api_port=8501 \
---model_name=${MODEL_NAME} \
---model_base_path=${MODEL_BASE_PATH} \
-"$@"' > /usr/bin/tf_serving_entrypoint.sh \
-&& chmod +x /usr/bin/tf_serving_entrypoint.sh
+# Expose port 5000 for Flask
+EXPOSE 5000
 
-# Use the custom entrypoint
-ENTRYPOINT ["/usr/bin/tf_serving_entrypoint.sh"]
+# Command to start Flask server
+CMD ["gunicorn", "-c", "gunicorn_config.py", "app:app"]
