@@ -1,7 +1,7 @@
 """Test configuration file"""
 
 # Test database URI (use a separate test database)
-TEST_DATABASE_URI = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2EpS34WfDDQ@mysql-2b7479e9-ca2-gan.i.aivencloud.com:15217/testdb?ssl_ca=./ca.pem"
+TEST_DATABASE_URI = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2EpS34WfDDQ@mysql-2b7479e9-ca2-gan.i.aivencloud.com:15217/testdb?ssl_mode=VERIFY_IDENTITY"
 
 # Test credentials
 TEST_USERNAME = "admin"
