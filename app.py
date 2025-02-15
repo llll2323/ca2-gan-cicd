@@ -19,7 +19,14 @@ from botocore.exceptions import ClientError
 app = Flask(__name__)
 
 # Database Connection (Aiven)
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2EpS34WfDDQ@mysql-2b7479e9-ca2-gan.i.aivencloud.com:15217/testdb?ssl=true"
+app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2EpS34WfDDQ@mysql-2b7479e9-ca2-gan.i.aivencloud.com:15217/testdb"
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'connect_args': {
+        'ssl': {
+            'ca': '/etc/ssl/certs/ca-certificates.crt'
+        }
+    }
+}
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # AWS Configuration
