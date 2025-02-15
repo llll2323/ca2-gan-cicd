@@ -23,9 +23,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # AWS Configuration
-app.config['AWS_ACCESS_KEY'] = 'YOUR_AWS_ACCESS_KEY'
-app.config['AWS_SECRET_KEY'] = 'YOUR_AWS_SECRET_KEY'
-app.config['AWS_BUCKET_NAME'] = 'YOUR_BUCKET_NAME'
+app.config['AWS_ACCESS_KEY'] = 'AKIAR7HWXWAEDIUD7CA6'
+app.config['AWS_SECRET_KEY'] = 'gjeaz4tzsPuiH8jDgQXc7qyBztG+hSiRYk70Q3cg'
+app.config['AWS_BUCKET_NAME'] = 'gan-images-bucket'
 app.config['AWS_REGION'] = 'ap-southeast-1'  # Singapore region
 
 # Use AWS secret key as Flask secret key
@@ -54,6 +54,14 @@ class GenerationHistory(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())  # Timestamp
     s3_url = db.Column(db.String(255), nullable=False)  # Store S3 URL
 
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)  # In production, store hashed passwords
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    last_login = db.Column(db.DateTime)
+    
 # Create tables if they don't exist
 with app.app_context():
     db.create_all()
@@ -105,8 +113,7 @@ def upload_to_s3(image_data, filename):
             app.config['AWS_BUCKET_NAME'],
             filename,
             ExtraArgs={
-                'ContentType': 'image/jpeg',
-                'ACL': 'public-read'  # Make the file publicly accessible
+                'ContentType': 'image/jpeg'
             }
         )
 
@@ -404,6 +411,38 @@ def process_image_for_s3(image_array):
         logger.error(f"Image array type: {type(image_array)}")
         logger.error(f"Image array content: {image_array}")
         raise
+
+@app.route('/delete_history', methods=['POST'])
+@login_required
+def delete_history():
+    try:
+        data = request.get_json()
+        vector = data.get('vector')
+        
+        if not vector:
+            return jsonify({'status': 'error', 'message': 'No vector provided'}), 400
+            
+        # Convert vector to string format for comparison
+        vector_str = json.dumps(vector, sort_keys=True)
+        
+        # Find and delete matching record
+        deleted = False
+        records = GenerationHistory.query.all()
+        for record in records:
+            if json.dumps(record.vector, sort_keys=True) == vector_str:
+                db.session.delete(record)
+                deleted = True
+                break
+                
+        if deleted:
+            db.session.commit()
+            return jsonify({'status': 'success'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Record not found'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error in delete_history: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
