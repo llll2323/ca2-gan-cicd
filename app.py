@@ -15,6 +15,7 @@ import io
 from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
+import pymysql
 
 app = Flask(__name__)
 
@@ -23,9 +24,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {
         'ssl': {
-            'verify_cert': False,
+            'ssl': True,
             'check_hostname': False,
-            'ssl_mode': 'VERIFY_NONE'
         }
     }
 }
@@ -40,8 +40,28 @@ app.config['AWS_REGION'] = 'ap-southeast-1'  # Singapore region
 # Use AWS secret key as Flask secret key
 app.secret_key = 'YOUR_AWS_SECRET_KEY'
 
-db = SQLAlchemy(app)
+# Create database if it doesn't exist
+def create_database():
+    try:
+        connection = pymysql.connect(
+            host='mysql-2b7479e9-ca2-gan.i.aivencloud.com',
+            user='avnadmin',
+            password='AVNS_BEmbjqYE2EpS34WfDDQ',
+            port=15217,
+            ssl={
+                'verify_cert': False,
+                'check_hostname': False,
+                'ssl_mode': 'VERIFY_NONE'
+            }
+        )
+        with connection.cursor() as cursor:
+            cursor.execute('CREATE DATABASE IF NOT EXISTS testdb')
+        connection.close()
+    except Exception as e:
+        print(f"Error creating database: {e}")
 
+create_database()
+db = SQLAlchemy(app)
 
 # Login required decorator
 def login_required(f):
