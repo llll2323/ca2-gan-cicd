@@ -4,42 +4,51 @@ async function generateImage() {
         const loadingIndicator = document.getElementById('loading-indicator');
         loadingIndicator.classList.remove('hidden');
         
-        // Generate a random vector of 100 numbers between -1 and 1
-        const vector = Array.from({ length: 100 }, () => Math.random() * 2 - 1);
-
-        // Create a batch of 100 identical vectors
-        const batch = Array.from({ length: 100 }, () => vector);
-
         const response = await fetch('/generate', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                signature_name: "serving_default",
-                instances: batch
-            })
+            }
         });
 
         const data = await response.json();
+        console.log('Server response:', data); // Debug log
 
         if (data.status === 'success') {
-            // Display vector
-            document.getElementById('current-vector').textContent =
-                JSON.stringify(data.vector, null, 2);
+            // Display vector if available
+            if (data.vector) {
+                document.getElementById('current-vector').textContent =
+                    JSON.stringify(data.vector, null, 2);
+            }
             
-            // Display image
-            const imageData = data.image[0];  // Get first image from predictions
-            displayImage(imageData);
-            
-            // Add to history
-            addToHistory(data);
+            // Display image from S3 URL
+            if (data.s3_url) {
+                const imageContainer = document.getElementById('generated-image');
+                const img = new Image();
+                img.src = data.s3_url;
+                img.alt = "Generated Image";
+                img.onerror = () => {
+                    console.error('Failed to load image from:', data.s3_url);
+                    alert('Failed to load image');
+                };
+                imageContainer.innerHTML = '';
+                imageContainer.appendChild(img);
+                
+                // Add to history
+                addToHistory({
+                    vector: data.vector,
+                    s3_url: data.s3_url,
+                    timestamp: new Date().toISOString()
+                });
+            } else {
+                throw new Error('No URL in response');
+            }
         } else {
-            alert('Error generating image: ' + data.message);
+            throw new Error(data.message || 'Generation failed');
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error generating image');
+        console.error('Generation error:', error);
+        alert('Error generating image: ' + error.message);
     } finally {
         // Hide loading indicator
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -214,16 +223,16 @@ function addToHistory(data) {
     let urlDisplay = 'No URL available';
     let imageHtml = '';
     
-    if (data.dropbox_url) {
-        console.log('Dropbox URL found:', data.dropbox_url);
-        urlDisplay = `<a href="${data.dropbox_url}" target="_blank" class="dropbox-link">${data.dropbox_url}</a>`;
+    if (data.s3_url) {
+        console.log('S3 URL found:', data.s3_url);
+        urlDisplay = `<a href="${data.s3_url}" target="_blank" class="s3-link">${data.s3_url}</a>`;
         viewButton = `<button class="history-btn" onclick="(function(e) { 
             e.preventDefault(); 
             e.stopPropagation(); 
-            window.open('${data.dropbox_url.replace(/'/g, "\\'")}', '_blank');
+            window.open('${data.s3_url.replace(/'/g, "\\'")}', '_blank');
         })(event)">View</button>`;
-        // Use the Dropbox image directly
-        imageHtml = `<img src="${data.dropbox_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
+        // Use the S3 image directly
+        imageHtml = `<img src="${data.s3_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
     }
 
     const vectorDisplay = JSON.stringify(data.vector).slice(0, 50) + '...';
@@ -242,12 +251,7 @@ function addToHistory(data) {
         </td>
     `;
     
-    // Insert at the beginning of the history
-    if (historyGrid.firstChild) {
-        historyGrid.insertBefore(row, historyGrid.firstChild);
-    } else {
-        historyGrid.appendChild(row);
-    }
+    historyGrid.appendChild(row);
 }
 
 // Add event listener for search type change
@@ -358,20 +362,20 @@ function updateHistoryDisplay(data) {
         let urlDisplay = 'No URL available';
         let imageHtml = '';
         
-        if (item.dropbox_url) {
-            console.log('Dropbox URL found:', item.dropbox_url);
-            urlDisplay = `<a href="${item.dropbox_url}" target="_blank" class="dropbox-link">${item.dropbox_url}</a>`;
+        if (item.s3_url) {
+            console.log('S3 URL found:', item.s3_url);
+            urlDisplay = `<a href="${item.s3_url}" target="_blank" class="s3-link">${item.s3_url}</a>`;
             viewButton = `<button class="history-btn" onclick="(function(e) { 
                 e.preventDefault(); 
                 e.stopPropagation(); 
                 console.log('View button clicked for item:', ${item.id});
-                console.log('Opening URL:', '${item.dropbox_url}');
-                window.open('${item.dropbox_url.replace(/'/g, "\\'")}', '_blank');
+                console.log('Opening URL:', '${item.s3_url}');
+                window.open('${item.s3_url.replace(/'/g, "\\'")}', '_blank');
             })(event)">View</button>`;
-            // Use the Dropbox image directly
-            imageHtml = `<img src="${item.dropbox_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
+            // Use the S3 image directly
+            imageHtml = `<img src="${item.s3_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
         } else {
-            console.log('No Dropbox URL for item:', item.id);
+            console.log('No S3 URL for item:', item.id);
         }
 
         const vectorDisplay = JSON.stringify(item.vector).slice(0, 50) + '...';
