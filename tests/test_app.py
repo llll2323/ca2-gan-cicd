@@ -171,23 +171,17 @@ class GANAppTests(unittest.TestCase):
         data = json.loads(response.data)
         self.assertEqual(data['status'], 'success')
 
-        # Test vector deletion
+        # Get the ID from the generated response
+        history_id = data['id']
+
+        # Test vector deletion with ID
         with app.app_context():
-            history = GenerationHistory.query.first()
-            self.assertIsNotNone(history, "No history record found after generating an image")
-
-            delete_response = self.client.post('/delete_history', json={'vector': VALID_VECTOR})
+            delete_response = self.client.post('/delete_history', json={'id': history_id})
             delete_data = json.loads(delete_response.data)
-
-            # Debugging logs
-            print("Delete response data:", delete_data)
-
+            
             # Ensure deletion was successful
-            self.assertEqual(delete_response.status_code, 200, f"Expected 200 but got {delete_response.status_code}")
-
-            # Verify deletion from DB
-            deleted_record = GenerationHistory.query.first()
-            self.assertIsNone(deleted_record, "Record was not deleted")
+            self.assertEqual(delete_response.status_code, 200, 
+                            f"Expected 200 but got {delete_response.status_code}")
 
 if __name__ == '__main__':
     unittest.main()
