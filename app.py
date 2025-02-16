@@ -20,7 +20,7 @@ import pymysql
 app = Flask(__name__)
 
 # Database Connection (Aiven)
-app.config['SQLALCHEMY_DATABASE_URI'] = "mysql+pymysql://avnadmin:AVNS_BEmbjqYE2EpS34WfDDQ@mysql-2b7479e9-ca2-gan.i.aivencloud.com:15217/testdb"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_URI')
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'connect_args': {
         'ssl': {
@@ -32,10 +32,10 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # AWS Configuration
-app.config['AWS_ACCESS_KEY'] = 'AKIAR7HWXWAEDIUD7CA6'
-app.config['AWS_SECRET_KEY'] = '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'
-app.config['AWS_BUCKET_NAME'] = 'gan-images-bucket'
-app.config['AWS_REGION'] = 'ap-southeast-1'  # Singapore region
+app.config['AWS_ACCESS_KEY'] = os.getenv('AWS_ACCESS_KEY')
+app.config['AWS_SECRET_KEY'] = os.getenv('AWS_SECRET_KEY')
+app.config['AWS_BUCKET_NAME'] = os.getenv('AWS_BUCKET_NAME')
+app.config['AWS_REGION'] = os.getenv('AWS_REGION')
 
 # Use AWS secret key as Flask secret key
 app.secret_key = 'YOUR_AWS_SECRET_KEY'
