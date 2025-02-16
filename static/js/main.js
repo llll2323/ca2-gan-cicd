@@ -35,11 +35,7 @@ async function generateImage() {
                 imageContainer.appendChild(img);
                 
                 // Add to history
-                addToHistory({
-                    vector: data.vector,
-                    s3_url: data.s3_url,
-                    timestamp: new Date().toISOString()
-                });
+                addToHistory(data);
             } else {
                 throw new Error('No URL in response');
             }
@@ -115,7 +111,6 @@ function displayImage(imageData) {
 function copyVector() {
     const vector = document.getElementById('current-vector').textContent;
     if (vector) {
-        // Ensure we're copying just the array, not the formatted string
         try {
             const vectorData = JSON.parse(vector);
             navigator.clipboard.writeText(JSON.stringify(vectorData))
@@ -135,15 +130,15 @@ async function pasteAndGenerate() {
         console.log('Pasted text:', text); // Debug log to check clipboard content
         let vector = JSON.parse(text);
         
-        // Check if the vector is nested and flatten it
-        if (Array.isArray(vector) && vector.length === 1 && Array.isArray(vector[0])) {
-            vector = vector[0];
-        }
-
         // Validate vector: now expecting 100 numbers
         if (!Array.isArray(vector) || vector.length !== 100) {
-            console.error('Validation failed:', vector);
-            throw new Error('Invalid vector format. Must be array of 100 numbers.');
+            // If it's a nested array, try to use the inner array
+            if (Array.isArray(vector) && vector.length === 1 && Array.isArray(vector[0]) && vector[0].length === 100) {
+                vector = vector[0];
+            } else {
+                console.error('Validation failed:', vector);
+                throw new Error('Invalid vector format. Must be array of 100 numbers.');
+            }
         }
 
         const batch = [vector];
@@ -157,7 +152,7 @@ async function pasteAndGenerate() {
             body: JSON.stringify({
                 signature_name: "serving_default",
                 instances: batch
-              })              
+            })              
         });
         
         const data = await response.json();
@@ -212,32 +207,17 @@ function extractImageInfo(imageData) {
 function addToHistory(data) {
     const historyGrid = document.getElementById('history-grid');
     
-    // Create new table row
     const row = document.createElement('tr');
     
-    // Format current date
-    const currentDate = new Date().toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-    });
+    const currentDate = new Date().toLocaleString();
 
-    // Create view button and URL display
     let viewButton = '';
     let urlDisplay = 'No URL available';
     let imageHtml = '';
     
     if (data.s3_url) {
-        console.log('S3 URL found:', data.s3_url);
         urlDisplay = `<a href="${data.s3_url}" target="_blank" class="s3-link">${data.s3_url}</a>`;
-        viewButton = `<button class="history-btn" onclick="(function(e) { 
-            e.preventDefault(); 
-            e.stopPropagation(); 
-            window.open('${data.s3_url.replace(/'/g, "\\'")}', '_blank');
-        })(event)">View</button>`;
+        viewButton = `<button class="history-btn" onclick="window.open('${data.s3_url}', '_blank')">View</button>`;
         imageHtml = `<img src="${data.s3_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
     }
 
@@ -253,11 +233,10 @@ function addToHistory(data) {
         <td class="action-cell">
             <button class="history-btn" onclick='copyHistoryVector(${JSON.stringify(data.vector)})'>Copy Vector</button>
             ${viewButton}
-            <button class="history-btn delete-btn" onclick='deleteHistoryItem(${JSON.stringify(data.vector)}, this.parentElement.parentElement)'>Delete</button>
+            <button class="history-btn delete-btn" onclick='deleteHistoryItem(${data.id || "null"}, this.closest("tr"))'>Delete</button>
         </td>
     `;
     
-    // Insert the new row at the beginning of the table
     if (historyGrid.firstChild) {
         historyGrid.insertBefore(row, historyGrid.firstChild);
     } else {
@@ -384,7 +363,7 @@ function updateHistoryDisplay(data) {
         actionCell.innerHTML = `
             <button class="history-btn" onclick='copyHistoryVector(${JSON.stringify(item.vector)})'>Copy Vector</button>
             <button class="history-btn" onclick="window.open('${item.s3_url}', '_blank')">View</button>
-            <button class="history-btn delete-btn" onclick='deleteHistoryItem(${JSON.stringify(item.vector)}, this.closest("tr"))'>Delete</button>
+            <button class="history-btn delete-btn" onclick='deleteHistoryItem(${item.id}, this.closest("tr"))'>Delete</button>
         `;
         
         row.appendChild(dateCell);
@@ -396,14 +375,14 @@ function updateHistoryDisplay(data) {
     });
 }
 
-async function deleteHistoryItem(vector, element) {
+async function deleteHistoryItem(id, element) {
     try {
         const response = await fetch('/delete_history', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ vector: vector })
+            body: JSON.stringify({ id: id })
         });
 
         const data = await response.json();
@@ -475,8 +454,13 @@ function downloadHistoryItem(item) {
 }
 
 function copyHistoryVector(vector) {
-    // Vector is already an array, just stringify it
-    navigator.clipboard.writeText(JSON.stringify(vector))
-        .then(() => alert('Vector copied to clipboard!'))
-        .catch(err => alert('Failed to copy vector: ' + err));
+    const vectorStr = JSON.stringify(vector);
+    navigator.clipboard.writeText(vectorStr)
+        .then(() => {
+            alert('Vector copied to clipboard!');
+        })
+        .catch(err => {
+            console.error('Failed to copy:', err);
+            alert('Failed to copy vector');
+        });
 }

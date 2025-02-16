@@ -188,13 +188,13 @@ def index():
 @login_required
 def generate():
     try:
-        # Generate random latent vector
-        vector = np.random.randn(1, 100).astype('float32').tolist()
+        # Generate random latent vector - change from nested to single array
+        vector = np.random.randn(100).astype('float32').tolist()  # Changed from (1, 100) to (100)
         
         # Prepare request data
         data = {
             "signature_name": "serving_default",
-            "instances": vector
+            "instances": [vector]  # Still wrap in array for model input
         }
         
         # Make request to model server
@@ -245,15 +245,19 @@ def generate():
                     }), 500
                 
                 # Save to database
-                new_record = GenerationHistory(vector=vector, s3_url=s3_url)
-                db.session.add(new_record)
+                history_entry = GenerationHistory(
+                    vector=vector,
+                    s3_url=s3_url
+                )
+                db.session.add(history_entry)
                 db.session.commit()
                 
                 return jsonify({
                     'status': 'success',
                     'vector': vector,
                     'image': result['predictions'],
-                    's3_url': s3_url
+                    's3_url': s3_url,
+                    'id': history_entry.id
                 })
             except Exception as e:
                 logger.error(f"Error processing image or uploading to S3: {str(e)}")
@@ -324,7 +328,8 @@ def generate_from_vector():
                 'status': 'success',
                 'vector': vector,
                 'image': result['predictions'],
-                's3_url': s3_url
+                's3_url': s3_url,
+                'id': new_record.id
             })
         else:
             error_msg = f'Model request failed: {response.text}'
@@ -479,24 +484,14 @@ def process_image_for_s3(image_array):
 def delete_history():
     try:
         data = request.get_json()
-        vector = data.get('vector')
+        record_id = data.get('id')
         
-        if not vector:
-            return jsonify({'status': 'error', 'message': 'No vector provided'}), 400
+        if not record_id:
+            return jsonify({'status': 'error', 'message': 'No ID provided'}), 400
             
-        # Convert vector to string format for comparison
-        vector_str = json.dumps(vector, sort_keys=True)
-        
-        # Find and delete matching record
-        deleted = False
-        records = GenerationHistory.query.all()
-        for record in records:
-            if json.dumps(record.vector, sort_keys=True) == vector_str:
-                db.session.delete(record)
-                deleted = True
-                break
-                
-        if deleted:
+        record = GenerationHistory.query.get(record_id)
+        if record:
+            db.session.delete(record)
             db.session.commit()
             return jsonify({'status': 'success'})
         else:
