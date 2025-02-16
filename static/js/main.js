@@ -132,10 +132,17 @@ function copyVector() {
 async function pasteAndGenerate() {
     try {
         const text = await navigator.clipboard.readText();
-        const vector = JSON.parse(text);
+        console.log('Pasted text:', text); // Debug log to check clipboard content
+        let vector = JSON.parse(text);
         
+        // Check if the vector is nested and flatten it
+        if (Array.isArray(vector) && vector.length === 1 && Array.isArray(vector[0])) {
+            vector = vector[0];
+        }
+
         // Validate vector: now expecting 100 numbers
         if (!Array.isArray(vector) || vector.length !== 100) {
+            console.error('Validation failed:', vector);
             throw new Error('Invalid vector format. Must be array of 100 numbers.');
         }
 
@@ -231,7 +238,6 @@ function addToHistory(data) {
             e.stopPropagation(); 
             window.open('${data.s3_url.replace(/'/g, "\\'")}', '_blank');
         })(event)">View</button>`;
-        // Use the S3 image directly
         imageHtml = `<img src="${data.s3_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
     }
 
@@ -251,7 +257,12 @@ function addToHistory(data) {
         </td>
     `;
     
-    historyGrid.appendChild(row);
+    // Insert the new row at the beginning of the table
+    if (historyGrid.firstChild) {
+        historyGrid.insertBefore(row, historyGrid.firstChild);
+    } else {
+        historyGrid.appendChild(row);
+    }
 }
 
 // Add event listener for search type change
@@ -349,50 +360,37 @@ async function loadHistory(page, search = '', dateFrom = '', dateTo = '') {
 function updateHistoryDisplay(data) {
     const historyGrid = document.getElementById('history-grid');
     historyGrid.innerHTML = '';
-    
-    data.history.forEach(item => {
-        console.log('Processing history item:', item);
-        
-        const row = document.createElement('tr');
-        const date = new Date(item.date);
-        const formattedDate = date.toLocaleString();
-        
-        // Create view button with proper event handling and logging
-        let viewButton = '';
-        let urlDisplay = 'No URL available';
-        let imageHtml = '';
-        
-        if (item.s3_url) {
-            console.log('S3 URL found:', item.s3_url);
-            urlDisplay = `<a href="${item.s3_url}" target="_blank" class="s3-link">${item.s3_url}</a>`;
-            viewButton = `<button class="history-btn" onclick="(function(e) { 
-                e.preventDefault(); 
-                e.stopPropagation(); 
-                console.log('View button clicked for item:', ${item.id});
-                console.log('Opening URL:', '${item.s3_url}');
-                window.open('${item.s3_url.replace(/'/g, "\\'")}', '_blank');
-            })(event)">View</button>`;
-            // Use the S3 image directly
-            imageHtml = `<img src="${item.s3_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
-        } else {
-            console.log('No S3 URL for item:', item.id);
-        }
 
-        const vectorDisplay = JSON.stringify(item.vector).slice(0, 50) + '...';
-            
-        row.innerHTML = `
-            <td>${formattedDate}</td>
-            <td class="image-cell">${imageHtml}</td>
-            <td class="info-display">
-                <div style="margin-bottom: 5px;"><strong>Vector:</strong> ${vectorDisplay}</div>
-                <div style="word-break: break-all;"><strong>URL:</strong> ${urlDisplay}</div>
-            </td>
-            <td class="action-cell">
-                <button class="history-btn" onclick='copyHistoryVector(${JSON.stringify(item.vector)})'>Copy Vector</button>
-                ${viewButton}
-                <button class="history-btn delete-btn" onclick='deleteHistoryItem(${JSON.stringify(item.vector)}, this.parentElement.parentElement)'>Delete</button>
-            </td>
+    // Remove the reverse since data is already in correct order
+    data.history.forEach(item => {
+        const row = document.createElement('tr');
+        
+        const dateCell = document.createElement('td');
+        dateCell.textContent = new Date(item.date).toLocaleString();
+        
+        const imageCell = document.createElement('td');
+        imageCell.classList.add('image-cell');
+        imageCell.innerHTML = `<img src="${item.s3_url}" alt="Generated Image" style="width: 56px; height: 56px; image-rendering: pixelated;">`;
+        
+        const vectorCell = document.createElement('td');
+        vectorCell.classList.add('info-display');
+        vectorCell.innerHTML = `
+            <div style="margin-bottom: 5px;"><strong>Vector:</strong> ${JSON.stringify(item.vector).slice(0, 50)}...</div>
+            <div style="word-break: break-all;"><strong>URL:</strong> <a href="${item.s3_url}" target="_blank" class="s3-link">${item.s3_url}</a></div>
         `;
+        
+        const actionCell = document.createElement('td');
+        actionCell.classList.add('action-cell');
+        actionCell.innerHTML = `
+            <button class="history-btn" onclick='copyHistoryVector(${JSON.stringify(item.vector)})'>Copy Vector</button>
+            <button class="history-btn" onclick="window.open('${item.s3_url}', '_blank')">View</button>
+            <button class="history-btn delete-btn" onclick='deleteHistoryItem(${JSON.stringify(item.vector)}, this.closest("tr"))'>Delete</button>
+        `;
+        
+        row.appendChild(dateCell);
+        row.appendChild(imageCell);
+        row.appendChild(vectorCell);
+        row.appendChild(actionCell);
         
         historyGrid.appendChild(row);
     });
